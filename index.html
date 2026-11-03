@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>High-Confidentiality Protection Gateway: Play Demo</title>
+<style>
+  body { font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif; margin: 0; background: #f4f5f7; color: #1a1a1a; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 28px; margin: 8px 0 4px; }
+  .sub { color: #555; margin: 0 0 20px; line-height: 1.5; }
+  .card { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 16px; margin: 12px 0; }
+  .card h2 { font-size: 17px; margin: 0 0 10px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  button { cursor: pointer; border: 1px solid #888; background: #fff; border-radius: 8px; padding: 9px 14px; font-size: 15px; }
+  button:hover { background: #eef3ff; }
+  button.active { background: #1a56db; color: #fff; border-color: #1a56db; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  .flow { display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; }
+  .box { flex: 1 1 200px; border: 2px solid #bbb; border-radius: 10px; padding: 12px; background: #fafafa; }
+  .box.gate { border-color: #1a56db; background: #eef3ff; }
+  .box h3 { margin: 0 0 6px; font-size: 15px; }
+  .box p { margin: 0; font-size: 14px; line-height: 1.5; color: #444; }
+  .arrow { align-self: center; font-size: 22px; color: #666; }
+  .decision { font-size: 20px; font-weight: 700; }
+  .decision.allow { color: #0a7a2f; }
+  .decision.hold { color: #b00020; }
+  .decision.scope { color: #7a5a00; }
+  .balances span { display: inline-block; margin-right: 18px; font-size: 16px; }
+  #playlog, #auditlog { list-style: none; padding: 0; margin: 0; font-size: 14px; line-height: 1.6; }
+  #playlog li, #auditlog li { border-bottom: 1px solid #eee; padding: 6px 0; }
+  .muted { color: #666; font-size: 13px; line-height: 1.6; }
+  .pill { display: inline-block; background: #eee; border-radius: 20px; padding: 2px 10px; font-size: 13px; margin-right: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>High-Confidentiality Protection Gateway: Play Demo</h1>
+  <p class="sub">Lightweight Protection Framework for Highest-Confidentiality Data and High-Value Assets. An independent framework for protecting core data.
+  This demo shows <b>what it does, not how it works</b>. The gate below is a black box:
+  you see its answer, never its internals. All data here is simulated. No real code,
+  no real keys, no internal structure.</p>
+
+  <div class="card">
+    <h2>1. Pick a host framework</h2>
+    <p class="muted">The same gate plugs into either host through one narrow interface.
+    The host keeps its own framework unchanged. It only asks the gate before executing
+    a core access, and obeys the answer.</p>
+    <div class="row" style="margin-top:10px">
+      <button id="hostHas" class="active" onclick="pickHost('has')">HAS-Core (our framework)</button>
+      <button id="hostGen" onclick="pickHost('gen')">Generic framework (simulated)</button>
+    </div>
+    <p style="margin-top:10px"><span class="pill" id="hostLabel">Current host: HAS-Core</span>
+    <span id="hostNote">Native connection: the gate is the core-protection module of this framework.</span></p>
+  </div>
+
+  <div class="card">
+    <h2>2. How it connects (no host internals needed)</h2>
+    <div class="flow">
+      <div class="box"><h3>Host framework</h3><p>Receives a request to touch core data. Before executing, it asks the gate one question: may this go ahead?</p></div>
+      <div class="arrow">&rarr;</div>
+      <div class="box gate"><h3>High-Confidentiality Protection Gateway</h3><p>Answers only: allow, hold, or not core area. It never shows how it decided.</p></div>
+      <div class="arrow">&rarr;</div>
+      <div class="box"><h3>Host executes or blocks</h3><p>The host follows the answer. Its own rules still apply on top.</p></div>
+    </div>
+    <p class="muted" style="margin-top:10px">For a generic framework, a thin adapter translates that one
+    question into the host's own hook. The gate itself does not change, and the host's
+    internals are never inspected.</p>
+  </div>
+
+  <div class="card">
+    <h2>3. Play: send a request through the gate</h2>
+    <div class="row">
+      <button onclick="scenario('normal')">Normal core access</button>
+      <button onclick="scenario('noncore')">Access to non-core data</button>
+      <button onclick="scenario('tampered')">Tampered request</button>
+      <button onclick="scenario('replay')">Reused request</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button onclick="scenario('close')">Admin: emergency close</button>
+      <button onclick="scenario('reset')">Admin: reset and reopen</button>
+      <button onclick="scenario('shutdown')">Joint shutdown (owner + vendor)</button>
+      <button onclick="scenario('restart')">Restart the gate</button>
+      <button onclick="resetDemo()">Reset demo</button>
+    </div>
+    <p style="margin-top:14px">Gate state: <b id="gateState">ON, open</b></p>
+    <p class="decision" id="decision">Press a scenario button to begin.</p>
+    <p id="decisionNote" class="muted"></p>
+    <p class="balances"><span>VAULT: <b id="balVault">1000</b></span><span>SAFE: <b id="balSafe">500</b></span><span>MARKET: <b id="balMarket">0</b></span></p>
+  </div>
+
+  <div class="card">
+    <h2>Play log</h2>
+    <ul id="playlog"><li class="muted">Nothing yet. Every request you send appears here.</li></ul>
+  </div>
+
+  <div class="card">
+    <h2>Audit log (exceptions only)</h2>
+    <p class="muted">Normal allowed requests are deliberately <b>not</b> recorded here.
+    Only abnormal events appear: holds, alarms, closes, resets and shutdowns.</p>
+    <ul id="auditlog"><li class="muted">No abnormal events yet.</li></ul>
+  </div>
+
+  <p class="muted">Simulated demo. Decisions shown are illustrative scenarios, not a security
+  product and not a certification. Production use requires laboratory validation, real
+  identity and device checks, and real hardening, none of which are shown or implied here.</p>
+</div>
+
+<script>
+var host = 'has';
+var gateClosed = false;   // emergency close: gate on, everything held
+var gateOff = false;      // joint shutdown: gate off
+var vault = 1000, safe = 500, market = 0, op = 0;
+
+function pickHost(h) {
+  host = h;
+  document.getElementById('hostHas').className = (h === 'has') ? 'active' : '';
+  document.getElementById('hostGen').className = (h === 'gen') ? 'active' : '';
+  document.getElementById('hostLabel').textContent = (h === 'has')
+    ? 'Current host: HAS-Core' : 'Current host: Generic framework (simulated)';
+  document.getElementById('hostNote').textContent = (h === 'has')
+    ? 'Native connection: the gate is the core-protection module of this framework.'
+    : 'Adapter connection: a thin adapter translates the one gate question into this host\'s own hook. The gate does not change.';
+  log('Host switched to ' + ((h === 'has') ? 'HAS-Core.' : 'a generic framework (simulated). The gate interface is the same.'), false);
+}
+
+function hostName() { return (host === 'has') ? 'HAS-Core' : 'generic framework'; }
+
+function refreshState() {
+  document.getElementById('gateState').textContent =
+    gateOff ? 'OFF (jointly shut down)' : (gateClosed ? 'ON, but emergency closed: everything held' : 'ON, open');
+  document.getElementById('balVault').textContent = vault;
+  document.getElementById('balSafe').textContent = safe;
+  document.getElementById('balMarket').textContent = market;
+}
+
+function showDecision(text, cls, note) {
+  var d = document.getElementById('decision');
+  d.textContent = text; d.className = 'decision ' + cls;
+  document.getElementById('decisionNote').textContent = note;
+}
+
+function log(msg, audit) {
+  var ul = document.getElementById('playlog');
+  if (ul.children.length === 1 && ul.children[0].className === 'muted') ul.innerHTML = '';
+  var li = document.createElement('li'); li.textContent = msg; ul.prepend(li);
+  if (audit) {
+    var au = document.getElementById('auditlog');
+    if (au.children.length === 1 && au.children[0].className === 'muted') au.innerHTML = '';
+    var a = document.createElement('li'); a.textContent = msg; au.prepend(a);
+  }
+}
+
+function nextOp() { op += 1; return 'demo-' + String(op).padStart(4, '0'); }
+
+function blockedByGateState() {
+  if (gateOff) return { text: 'HOLD: gate is off', note: 'The gate was jointly shut down. Nothing executes until it is restarted. Balances unchanged.' };
+  if (gateClosed) return { text: 'HOLD: gate is emergency closed', note: 'The gate is still on, but it is holding everything. Only an admin reset reopens it. Balances unchanged.' };
+  return null;
+}
+
+function scenario(kind) {
+  var id = nextOp();
+  var blocked = blockedByGateState();
+  if (kind === 'close') {
+    if (gateOff) { showDecision('No change: gate is already off', 'hold', 'Restart the gate first, then try the emergency close.'); return; }
+    if (gateClosed) { showDecision('No change: gate is already emergency closed', 'hold', 'Use the admin reset to reopen it.'); return; }
+    gateClosed = true; refreshState();
+    showDecision('EMERGENCY CLOSED: alarm raised', 'hold', 'The gate stays on and now holds everything. It will not reopen on its own when load drops. Only an admin reset reopens it.');
+    log(id + ' [' + hostName() + '] Admin emergency close: gate closed, alarm raised.', true); return;
+  }
+  if (kind === 'reset') {
+    if (!gateClosed) { showDecision('No change: gate is not emergency closed', 'scope', 'There is nothing to reset. The gate is already open.'); return; }
+    gateClosed = false; refreshState();
+    showDecision('RESET: gate reopened', 'allow', 'Admin reset accepted. The gate is open again and normal requests can proceed.');
+    log(id + ' [' + hostName() + '] Admin reset: gate reopened.', true); return;
+  }
+  if (kind === 'shutdown') {
+    if (gateOff) { showDecision('No change: gate is already off', 'hold', 'Restart the gate to bring it back.'); return; }
+    gateClosed = false; gateOff = true; refreshState();
+    showDecision('SHUT DOWN: gate is off', 'hold', 'Owner authorization plus vendor confirmation together switched the gate off. No alarm: this shutdown was authorised. Nothing executes while it is off.');
+    log(id + ' [' + hostName() + '] Joint shutdown (owner + vendor): gate off.', true); return;
+  }
+  if (kind === 'restart') {
+    if (!gateOff && !gateClosed) { showDecision('No change: gate is already on and open', 'scope', 'Restart only matters after a shutdown or an emergency close.'); return; }
+    var wasClosed = gateClosed;
+    gateOff = false;
+    refreshState();
+    if (wasClosed) {
+      showDecision('After restart: gate is STILL emergency closed', 'hold', 'Emergency close survives a restart by design. Only an admin reset reopens it. This is different from a shutdown.');
+      log(id + ' [' + hostName() + '] Restart: emergency close still in force. Admin reset required.', true);
+    } else {
+      showDecision('After restart: gate is ON again', 'allow', 'A shutdown does not survive a restart. The gate starts on again.');
+      log(id + ' [' + hostName() + '] Restart: gate back on.', true);
+    }
+    return;
+  }
+  if (blocked) {
+    showDecision(blocked.text, 'hold', blocked.note);
+    log(id + ' [' + hostName() + '] Request held because ' + (gateOff ? 'the gate is off.' : 'the gate is emergency closed.'), true); return;
+  }
+  if (kind === 'normal') {
+    vault -= 50; safe += 50; refreshState();
+    showDecision('ALLOW: executed', 'allow', 'A designated core access. The host executed it and the balances moved by 50. Normal requests are not written to the audit log.');
+    log(id + ' [' + hostName() + '] Normal core access: ALLOW, executed. VAULT ' + vault + ', SAFE ' + safe + '.', false); return;
+  }
+  if (kind === 'noncore') {
+    showDecision('OUT OF SCOPE: not core area', 'scope', 'This data is not in the designated core area, so the gate does not decide it. The host applies its own rules. Nothing was held and no alarm was raised. Balances unchanged.');
+    log(id + ' [' + hostName() + '] Non-core access: OUT OF SCOPE, host decides under its own rules.', false); return;
+  }
+  if (kind === 'tampered') {
+    showDecision('HOLD: request does not match', 'hold', 'The request did not match what the gate expects for this core object, so it was held and an alarm was raised. Nothing executed. Balances unchanged.');
+    log(id + ' [' + hostName() + '] Tampered request: HOLD, alarm raised.', true); return;
+  }
+  if (kind === 'replay') {
+    showDecision('HOLD: reused request', 'hold', 'This request was already used once, so it was held. Nothing executed twice. Balances unchanged.');
+    log(id + ' [' + hostName() + '] Reused request: HOLD.', true); return;
+  }
+}
+
+function resetDemo() {
+  gateClosed = false; gateOff = false; vault = 1000; safe = 500; market = 0; op = 0;
+  refreshState();
+  showDecision('Demo reset.', 'scope', 'Press a scenario button to begin.');
+  document.getElementById('playlog').innerHTML = '<li class="muted">Nothing yet. Every request you send appears here.</li>';
+  document.getElementById('auditlog').innerHTML = '<li class="muted">No abnormal events yet.</li>';
+}
+refreshState();
+</script>
+</body>
+</html>
