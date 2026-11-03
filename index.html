@@ -159,6 +159,7 @@
 var host = 'has';
 var gateClosed = false;
 var gateOff = false;
+var animSeq = 0;
 var vault = 1000, safe = 500;
 var resetPending = false;
 var shutdownRequested = false;
@@ -206,6 +207,11 @@ function resetDot() {
   d.style.transition = 'none'; d.style.left = '6%'; d.style.top = '7px'; d.className = 'dot';
   void d.offsetWidth;
   d.style.transition = 'left 0.45s ease, top 0.45s ease, background 0.2s';
+}
+
+function showBlockedNow() {
+  if (gateOff) { showStatus('block', 'BLOCK', 'Gate is off, vault stays locked. Nothing executes until it is restarted.'); }
+  else { showStatus('block', 'BLOCK', 'Gate is emergency closed. Only an authorised recovery reopens it.'); }
 }
 
 function moveDot(toLeft, toTop, cls, done) {
@@ -283,6 +289,7 @@ function toggleRegistry() {
 
 function scenario(kind) {
   resetDot();
+  var mySeq = ++animSeq;
   if (kind === 'close') {
     if (gateOff) { showStatus('block', 'BLOCK', 'Gate is already off. Restart it first.'); return; }
     if (gateClosed) { showStatus('block', 'BLOCK', 'Gate is already emergency closed. Request a reset to start verification.'); return; }
@@ -311,7 +318,10 @@ function scenario(kind) {
   if (gateClosed) { showStatus('block', 'BLOCK', 'Gate is emergency closed. Only an authorised recovery reopens it.'); return; }
   if (kind === 'normal') {
     moveDot('46%', '7px', '', function() {
+      if (mySeq !== animSeq) return;
       moveDot('88%', '7px', 'pass', function() {
+        if (mySeq !== animSeq) return;
+        if (gateOff || gateClosed) { showBlockedNow(); return; }
         vault -= 50; safe += 50; refreshBars();
         showStatus('allow', 'ALLOW', 'Core access allowed. The vault opened and the balances moved by 50.');
       });
@@ -321,7 +331,10 @@ function scenario(kind) {
   }
   if (kind === 'noncore') {
     moveDot('46%', '-2px', 'bypass', function() {
+      if (mySeq !== animSeq) return;
       moveDot('88%', '-2px', 'bypass', function() {
+        if (mySeq !== animSeq) return;
+        if (gateOff || gateClosed) { showBlockedNow(); return; }
         showStatus('scope', 'NOT CORE AREA', 'Not in the designated core area. The gate does not decide it. The host applies its own rules.');
       });
     });
@@ -330,6 +343,8 @@ function scenario(kind) {
   }
   if (kind === 'tampered') {
     moveDot('44%', '7px', 'stop', function() {
+      if (mySeq !== animSeq) return;
+      if (gateOff || gateClosed) { showBlockedNow(); return; }
       showStatus('block', 'BLOCK', 'Request does not match. Held at the gate, alarm on. Nothing executed.', true);
     });
     showStatus('idle', '...', 'Request travelling to the gate...');
@@ -337,6 +352,8 @@ function scenario(kind) {
   }
   if (kind === 'replay') {
     moveDot('44%', '7px', 'stop', function() {
+      if (mySeq !== animSeq) return;
+      if (gateOff || gateClosed) { showBlockedNow(); return; }
       showStatus('block', 'BLOCK', 'Reused request. Held at the gate. Nothing executed twice.', true);
     });
     showStatus('idle', '...', 'Request travelling to the gate...');
@@ -344,6 +361,8 @@ function scenario(kind) {
   }
   if (kind === 'highvalue') {
     moveDot('44%', '7px', 'stop', function() {
+      if (mySeq !== animSeq) return;
+      if (gateOff || gateClosed) { showBlockedNow(); return; }
       setRecord('high-value direct transfer held, alarm raised, awaiting manual verification');
       showStatus('scope', 'HOLD', 'Over the example threshold: held, alarm raised, independent manual verification required before any decision. Threshold values here are illustrative only, not the customer configured threshold.', true);
     });
@@ -353,6 +372,7 @@ function scenario(kind) {
 }
 
 function resetDemo() {
+  animSeq++;
   gateClosed = false; gateOff = false; vault = 1000; safe = 500;
   resetPending = false; shutdownRequested = false; pendingAction = null; approvals = { a: false, b: false };
   el('confirmResetBtn').disabled = true;
