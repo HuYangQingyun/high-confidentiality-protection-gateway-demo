@@ -29,16 +29,21 @@ and it obeys the answer. No host is favoured, and no generic framework is
 named.
 - Behaviours you can play with: normal core access, non-core access,
   tampered request, reused request, high-value direct transfer (held),
-  emergency close, simulated authorised recovery, protected shutdown in two
-  modes, authorised service resumption, restart, and the protected asset
+  emergency close, simulated authorised recovery, protected shutdown under
+  joint customer-plus-vendor authorisation, restart, and the protected asset
   registry.
 - Two different states that must not be confused: emergency close (gate stays
   on, everything held, survives restart, only an authorised recovery reopens
-  it) versus shutdown (gate off, only a full authorisation switches it off).
-  Restart never brings either state back on: a shut-down service needs its
-  own authorisation to resume, and an emergency-closed gate needs an
-  authorised recovery. Gate off never opens the vault: during shutdown
-  the vault stays locked and unauthorised access is still refused.
+  it) versus shutdown (gate off, only a joint customer-plus-vendor
+  authorisation switches it off).
+  Restart treats the two states differently, and the difference is the
+  point. An emergency-closed gate stays closed across a restart and needs
+  an authorised recovery. A shut-down gate comes back ON and protecting
+  across a restart, because the restart itself was jointly authorised by
+  both sides before it happened, so no separate resumption approval is
+  needed. A further shutdown needs a fresh joint authorisation. Gate off
+  never opens the vault: during shutdown the vault stays locked and
+  unauthorised access is still refused.
 
 ## Recovery after an emergency close
 
@@ -49,26 +54,31 @@ then the gate stays locked, including across a restart. In this demo the
 verification step is simulated: the button reads "Simulate authorised
 recovery" so no one mistakes the HTML page for real credential verification.
 
-## Protected shutdown: two modes
+## Protected shutdown: joint authorisation only
 
-A protected shutdown needs every approver, never one person alone:
+A protected shutdown needs both sides together, never one side alone. The
+customer owner and the vendor (the framework provider) must jointly
+authorise it. The vendor alone cannot shut down, change, or modify
+anything, and the customer alone cannot modify anything either. The same
+joint authorisation is required for an upgrade, a replacement, a database
+upgrade, or any such change. Only when both approvers have approved does
+the gate enter a controlled shutdown. A shutdown is a controlled stop of
+the gate, not a release of the protected assets.
 
-- Autonomous mode: two customer officers approve, both inside the customer.
-- Joint management mode: the customer owner and the vendor approve together.
-
-Only when all approvers have approved does the gate enter a controlled
-shutdown. A shutdown is a controlled stop of the gate, not a release of the
-protected assets.
-
-Device restart and service resumption are different things. After a
-shutdown, restarting the device alone never resumes the service. Resumption
-needs its own authorisation, from the same approvers, before the gate opens
-again. The same holds for an emergency close: a restart never unlocks it.
-
-Mode selection in the demo is a presenter tool only, labelled "Presenter:
-mode ...". A real deployment mode change needs approval through the existing
-authorisation mechanism. An ordinary admin cannot switch the authorisation
-regime alone.
+Restart and protection go together, and that is the whole point. The gate
+is either ON and protecting, or OFF and not protecting. A restart after a
+shutdown brings the gate back ON and protecting at once. No separate
+resumption approval is needed, because the restart itself was jointly
+authorised: both sides signed and recognised it before restarting, and
+without that recognition there would be no restart at all. An emergency
+close is different and stays as it was: the gate there is ON and holding
+everything, so a restart keeps it closed and holding, and only an
+authorised recovery reopens it. Changes to what is protected, such as the
+customer expanding or reducing the protected data, changing the system, or
+changing the owner, go through the deployment and designation process.
+They are not handled by a resumption approval, because protection follows
+the gate being ON, and the gate protects whatever is designated at the
+time.
 
 ## Protected asset registry
 

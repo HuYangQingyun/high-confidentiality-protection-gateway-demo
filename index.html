@@ -119,17 +119,12 @@
     </div>
   </div>
 
-  <!-- PROTECTED SHUTDOWN, TWO MODES -->
+  <!-- PROTECTED SHUTDOWN, JOINT AUTHORISATION -->
   <div class="panel">
-    <h2>Protected shutdown: two modes</h2>
-    <p class="muted" style="margin:0 0 10px">Pick a mode first. Autonomous: two customer officers approve. Joint management: the customer owner and the vendor approve. All approvals are needed before a controlled shutdown. During shutdown the vault stays locked: gate off does not open the vault. Mode selection here is a presenter tool only: a real deployment mode change needs approval through the existing authorisation mechanism, and an ordinary admin cannot switch the authorisation regime alone. After a shutdown, a device restart alone never resumes the service: resumption needs its own authorisation.</p>
-    <div class="row">
-      <button id="modeAutoBtn" class="small active" onclick="pickMode('auto')">Presenter: mode autonomous (customer internal)</button>
-      <button id="modeJointBtn" class="small" onclick="pickMode('joint')">Presenter: mode joint management (customer + vendor)</button>
-    </div>
+    <h2>Protected shutdown: joint authorisation only</h2>
+    <p class="muted" style="margin:0 0 10px">Shutdown, upgrade, replacement, database upgrade, or any such change needs BOTH sides together: the customer and the vendor (the framework provider) must jointly authorise it. Neither side alone can do it. The vendor alone cannot shut down, change, or modify anything, and the customer alone cannot modify anything either. Both approvals are needed before a controlled shutdown. During shutdown the vault stays locked: gate off does not open the vault. After a shutdown, a restart brings the gate back ON and protecting again. Restart itself is a jointly authorised act: both sides signed and recognised it before restarting, so no separate resumption approval is needed. A further shutdown needs a fresh joint authorisation.</p>
     <div class="row" style="margin-top:8px">
       <button onclick="requestShutdown()">Request Protected Shutdown</button>
-      <button onclick="requestResume()">Request service resumption</button>
     </div>
     <div id="approvalPanel" class="approval">
       <div id="approvalText"></div>
@@ -157,7 +152,7 @@
     </div>
   </div>
 
-  <p class="muted">Scenario demo only: gate state, balances and approvals live only in this page. Refreshing the page resets them. Restart the gate here simulates a device restart. It never unlocks an emergency-closed gate and never resumes a shut-down service. It does not prove cross-process or cross-machine persistent locking. Presenter reset and presenter mode selection are demo tools only, not customer security operations. Decisions shown are illustrative scenarios, not a security product and not a certification. The gate is a black box: the screen shows allow, hold, or not core area, never how it decided.</p>
+  <p class="muted">Scenario demo only: gate state, balances and approvals live only in this page. Refreshing the page resets them. Restart the gate here simulates a device restart. It never unlocks an emergency-closed gate, but after a shutdown it brings the gate back ON and protecting again. It does not prove cross-process or cross-machine persistent locking. Presenter reset is a demo tool only, not a customer security operation. Decisions shown are illustrative scenarios, not a security product and not a certification. The gate is a black box: the screen shows allow, hold, or not core area, never how it decided.</p>
 </div>
 
 <script>
@@ -166,7 +161,6 @@ var gateClosed = false;
 var gateOff = false;
 var vault = 1000, safe = 500;
 var resetPending = false;
-var shutdownMode = 'auto';
 var shutdownRequested = false;
 var pendingAction = null;
 var approvals = { a: false, b: false };
@@ -238,19 +232,8 @@ function confirmReset() {
   showStatus('allow', 'OPEN', 'SIMULATED AUTHORISED RECOVERY: this demo only simulates the step. In a real deployment, admin identity and the one-time credential would be verified here. Gate reopened, recovery recorded.');
 }
 
-function pickMode(m) {
-  shutdownMode = m;
-  shutdownRequested = false;
-  pendingAction = null;
-  approvals = { a: false, b: false };
-  el('modeAutoBtn').className = (m === 'auto') ? 'small active' : 'small';
-  el('modeJointBtn').className = (m === 'joint') ? 'small active' : 'small';
-  el('approvalPanel').style.display = 'none';
-  showStatus('idle', 'Press a button below', (m === 'auto') ? 'Presenter mode selection (demo only): autonomous. Two customer officers must approve a shutdown.' : 'Presenter mode selection (demo only): joint management. The customer owner and the vendor must approve a shutdown.');
-}
-
 function approverNames() {
-  return (shutdownMode === 'auto') ? ['Customer officer 1', 'Customer officer 2'] : ['Customer owner', 'Vendor'];
+  return ['Customer owner', 'Vendor'];
 }
 
 function refreshApprovalText() {
@@ -259,7 +242,7 @@ function refreshApprovalText() {
 }
 
 function requestShutdown() {
-  if (gateOff) { showStatus('block', 'BLOCK', 'Gate is already off. Request a service resumption to bring it back.'); return; }
+  if (gateOff) { showStatus('block', 'BLOCK', 'Gate is already off. Restart it to bring it back ON and protecting.'); return; }
   if (shutdownRequested) { showStatus('scope', 'AWAITING APPROVAL', 'Shutdown already requested. All approvals are needed first.'); return; }
   shutdownRequested = true;
   pendingAction = 'shutdown';
@@ -274,44 +257,20 @@ function requestShutdown() {
   showStatus('scope', 'AWAITING APPROVAL', 'Protected shutdown requested. No shutdown happens until every approver approves.');
 }
 
-function requestResume() {
-  if (gateClosed) { showStatus('block', 'BLOCK', 'Gate is emergency closed, not shut down. Use the authorised recovery path, not service resumption.'); return; }
-  if (!gateOff) { showStatus('scope', 'SERVICE IS ON', 'Service is not off. Nothing to resume.'); return; }
-  if (pendingAction === 'resume') { showStatus('scope', 'AWAITING APPROVAL', 'Resumption already requested. All approvals are needed first.'); return; }
-  pendingAction = 'resume';
-  shutdownRequested = false;
-  approvals = { a: false, b: false };
-  var names = approverNames();
-  el('approveBtnA').textContent = names[0] + ' approves';
-  el('approveBtnB').textContent = names[1] + ' approves';
-  el('approveBtnA').disabled = false;
-  el('approveBtnB').disabled = false;
-  el('approvalPanel').style.display = 'block';
-  refreshApprovalText();
-  showStatus('scope', 'AWAITING APPROVAL', 'Service resumption requested. A device restart alone never resumes the service. All approvals are needed first.');
-}
-
 function approve(who) {
   if (!pendingAction) return;
   approvals[who] = true;
   el(who === 'a' ? 'approveBtnA' : 'approveBtnB').disabled = true;
   if (approvals.a && approvals.b) {
-    var action = pendingAction;
     shutdownRequested = false;
     pendingAction = null;
     el('approvalPanel').style.display = 'none';
-    if (action === 'shutdown') {
-      gateClosed = false;
-      resetPending = false;
-      el('confirmResetBtn').disabled = true;
-      gateOff = true;
-      setRecord('controlled shutdown authorised by all approvers');
-      showStatus('block', 'BLOCK', 'AUTHORISED SHUTDOWN: all approvers approved. Gate off, but the vault stays locked. Gate off does not open the vault. Unauthorised access is still refused.');
-    } else {
-      gateOff = false;
-      setRecord('service resumed after authorisation (simulated approvals)');
-      showStatus('allow', 'OPEN', 'SERVICE RESUMED: all approvers approved the resumption. Gate ON again. A restart alone never resumes the service.');
-    }
+    gateClosed = false;
+    resetPending = false;
+    el('confirmResetBtn').disabled = true;
+    gateOff = true;
+    setRecord('controlled shutdown authorised by all approvers');
+    showStatus('block', 'BLOCK', 'AUTHORISED SHUTDOWN: all approvers approved. Gate off, but the vault stays locked. Gate off does not open the vault. Unauthorised access is still refused.');
   } else {
     refreshApprovalText();
   }
@@ -343,7 +302,8 @@ function scenario(kind) {
     if (wasClosed) {
       showStatus('block', 'BLOCK', 'After restart: STILL closed. Emergency close survives restart. Only an authorised recovery reopens it.');
     } else {
-      showStatus('block', 'BLOCK', 'After restart: STILL OFF. A device restart is not a service resumption. Request a service resumption and get all approvals first. The vault was never opened.');
+      gateOff = false;
+      showStatus('allow', 'OPEN', 'After restart: gate is ON again and protecting. Restart itself was jointly authorised, so protection resumes at once. The vault was never opened. A further shutdown needs a fresh joint authorisation.');
     }
     return;
   }
